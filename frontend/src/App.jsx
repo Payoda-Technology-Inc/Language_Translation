@@ -2,6 +2,14 @@ import { useState, useEffect, useRef } from "react";
 import styles from "./App.module.css";
 import { Paperclip, ChevronLeft, ChevronRight } from "lucide-react";
 
+import Sidebar from "./components/Sidebar/Sidebar";
+import ChatMessages from "./components/Chat/ChatMessages";
+import ChatHeader from "./components/Chat/ChatHeader";
+import ChatInput from "./components/Chat/ChatInput";
+import FilePreview from "./components/FilePreview";
+import DropdownMenu from "./components/DropdownMenu";
+
+
 function App() {
   const [file, setFile] = useState(null);
   const [question, setQuestion] = useState("");
@@ -25,13 +33,6 @@ function App() {
   const [menuOpenIndex, setMenuOpenIndex] = useState(null);
 
   const [documents, setDocuments] = useState([]);
-
-  function formatMarkdown(text) {
-    return text.replace(
-      /\*\*(.*?)\*\*/g,
-      '<strong class="bold-text">$1</strong>'
-    );
-  }
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -227,185 +228,27 @@ function App() {
   return (
     <div className={styles.appWrapper}>
       {/* Sidebar */}
-      <div
-        className={`${styles.sidebar} ${
-          !isSidebarOpen ? styles.sidebarClosed : ""
-        }`}
-      >
-        <div className={styles.sidebarHeader}>
-          {isSidebarOpen && <h2 className={styles.logo}>AI Assistant</h2>}
-          <button
-            className={styles.toggleBtn}
-            onClick={() => setIsSidebarOpen((prev) => !prev)}
-          >
-            {isSidebarOpen ? (
-              <ChevronLeft size={16} />
-            ) : (
-              <ChevronRight size={16} />
-            )}
-          </button>
-        </div>
-
-        {isSidebarOpen && (
-          <div className={styles.sidebarContent}>
-            <div className={styles.language}>🌐 English</div>
-            <div className={styles.nav}>
-              <div
-                className={styles.navItemActive}
-                onClick={async () => {
-                  if (currentChat.length > 0) {
-                    try {
-                      const res = await fetch(
-                        "http://localhost:5000/generate-title",
-                        {
-                          method: "POST",
-                          headers: { "Content-Type": "application/json" },
-                          body: JSON.stringify({
-                            messages: currentChat.slice(0, 4),
-                          }),
-                        }
-                      );
-
-                      const data = await res.json();
-                      const generatedTitle =
-                        data.title || `Chat ${conversations.length + 1}`;
-
-                      setConversations((prev) => [
-                        {
-                          name: generatedTitle,
-                          messages: currentChat,
-                        },
-                        ...prev,
-                      ]);
-
-                      await fetch("http://localhost:5000/api/save-chat", {
-                        method: "POST",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({
-                          title: generatedTitle,
-                          messages: currentChat,
-                        }),
-                      });
-                    } catch (error) {
-                      console.error("Title generation failed:", error);
-                      setConversations((prev) => [
-                        {
-                          name: `Chat ${conversations.length + 1}`,
-                          messages: currentChat,
-                        },
-                        ...prev,
-                      ]);
-                    }
-                  }
-
-                  setCurrentChat([]);
-                }}
-              >
-                New Chat
-              </div>
-
-              <div
-                ref={documentsBtnRef}
-                className={styles.navItemActive}
-                style={{
-                  marginBottom: "1rem",
-                  background: isDocumentsOpen ? "#407af6" : undefined,
-                }}
-                onClick={() => setIsDocumentsOpen((prev) => !prev)}
-              >
-                Documents
-              </div>
-
-              {isDocumentsOpen && (
-                <div ref={documentsPopupRef} className={styles.documentsPopup}>
-                  {documents.length === 0 ? (
-                    <div className={styles.navItem}>No files uploaded</div>
-                  ) : (
-                    documents.map((doc, idx) => (
-                      <div key={idx} className={styles.navItem}>
-                        📄 {doc.name}
-                      </div>
-                    ))
-                  )}
-                </div>
-              )}
-
-              <div className={styles.navItemTitle}>Past Conversations</div>
-              {conversations.map((conv, index) => (
-                <div
-                  key={index}
-                  className={styles.navItem}
-                  onMouseEnter={() => setHoverIndex(index)}
-                  onMouseLeave={() => setHoverIndex(null)}
-                >
-                  {editingIndex === index ? (
-                    <input
-                      type="text"
-                      value={renameText}
-                      onChange={(e) => setRenameText(e.target.value)}
-                      onBlur={() => handleRename(index)}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter") handleRename(index);
-                      }}
-                      autoFocus
-                      className={styles.renameInput}
-                    />
-                  ) : (
-                    <div className={styles.chatRow}>
-                      <span
-                        onClick={() => {
-                          setCurrentChat(conversations[index].messages);
-                        }}
-                      >
-                         {conv.name}
-                      </span>
-
-                      {hoverIndex === index && (
-                        <div
-                          className={styles.menuIcon}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setMenuOpenIndex(
-                              index === menuOpenIndex ? null : index
-                            );
-                          }}
-                        >
-                          ⋯
-                        </div>
-                      )}
-                    </div>
-                  )}
-
-                  {/* Dropdown menu */}
-                  {menuOpenIndex === index && (
-                    <div ref={dropdownRef} className={styles.dropdownMenu}>
-                      <div
-                        onClick={() => {
-                          setEditingIndex(index);
-                          setRenameText(conv.name);
-                          setMenuOpenIndex(null);
-                        }}
-                      >
-                        Rename
-                      </div>
-                      <div
-                        onClick={() => {
-                          setConversations((prev) =>
-                            prev.filter((_, i) => i !== index)
-                          );
-                          setMenuOpenIndex(null);
-                        }}
-                      >
-                        Delete
-                      </div>
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-      </div>
+      <Sidebar
+        isSidebarOpen={isSidebarOpen}
+        setIsSidebarOpen={setIsSidebarOpen}
+        documents={documents}
+        conversations={conversations}
+        currentChat={currentChat}
+        setCurrentChat={setCurrentChat}
+        isDocumentsOpen={isDocumentsOpen}
+        setIsDocumentsOpen={setIsDocumentsOpen}
+        editingIndex={editingIndex}
+        setEditingIndex={setEditingIndex}
+        renameText={renameText}
+        setRenameText={setRenameText}
+        hoverIndex={hoverIndex}
+        setHoverIndex={setHoverIndex}
+        menuOpenIndex={menuOpenIndex}
+        setMenuOpenIndex={setMenuOpenIndex}
+        handleRename={handleRename}
+        dropdownRef={dropdownRef}
+        setConversations={setConversations}
+      />
 
       {/* Main Chat Area */}
       <div
@@ -414,92 +257,26 @@ function App() {
         }`}
       >
         {/* Header */}
-        <div className={styles.chatHeader}>
-          <h1>AI Assistant Chat</h1>
-          <p>Ask me anything or upload documents for analysis</p>
-        </div>
+        <ChatHeader />
 
         {/* Chat Messages - Scrollable Area */}
         <div className={styles.chatMessagesContainer}>
           <div className={styles.chatMessages}>
-            {currentChat.map((msg, i) => (
-              <div
-                key={i}
-                className={
-                  msg.type === "user" ? styles.userBubble : styles.aiBubble
-                }
-              >
-                <div
-                  dangerouslySetInnerHTML={{ __html: formatMarkdown(msg.text) }}
-                />
-              </div>
-            ))}
-
-            {/* Invisible element to scroll to */}
+            <ChatMessages currentChat={currentChat} />
             <div ref={messagesEndRef} />
           </div>
         </div>
 
-        <div className={styles.chatInputContainer}>
-          {/* File Preview */}
-          {previewFileName && (
-            <div className={styles.filePreview}>
-              <span>📄 {previewFileName}</span>
-              <button
-                className={styles.removeFileButton}
-                onClick={() => {
-                  setFile(null);
-                  setPreviewFileName("");
-                }}
-              >
-                ✕
-              </button>
-            </div>
-          )}
-
-          {/* Input Row */}
-          <div className={styles.chatInputWrapper}>
-            <label className={styles.attachmentIcon}>
-              <Paperclip size={20} />
-              <input
-                type="file"
-                accept=".txt,.pdf"
-                onChange={(e) => {
-                  const selected = e.target.files[0];
-                  if (selected) {
-                    setFile(selected);
-                    setPreviewFileName(selected.name);
-                    e.target.value = null;
-                  }
-                }}
-                className={styles.hiddenInput}
-              />
-            </label>
-
-            <input
-              type="text"
-              value={question}
-              onChange={(e) => setQuestion(e.target.value)}
-              placeholder="Type your message..."
-              className={styles.questionInput}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" && !e.shiftKey) {
-                  e.preventDefault();
-                  handleSend();
-                }
-              }}
-              disabled={isLoading}
-            />
-
-            <button
-              className={styles.askButton}
-              onClick={handleSend}
-              disabled={isLoading}
-            >
-              {isLoading ? "..." : "Send"}
-            </button>
-          </div>
-        </div>
+        <ChatInput
+          question={question}
+          setQuestion={setQuestion}
+          isLoading={isLoading}
+          handleSend={handleSend}
+          file={file}
+          setFile={setFile}
+          previewFileName={previewFileName}
+          setPreviewFileName={setPreviewFileName}
+        />
       </div>
     </div>
   );
