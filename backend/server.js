@@ -31,7 +31,6 @@ app.get("/", (req, res) => {
   res.send("Backend is working!");
 });
 
-// let uploadedKnowledge = "";
 
 app.post("/upload", upload.single("file"), async (req, res) => {
   res.setHeader("Content-Type", "text/event-stream");
